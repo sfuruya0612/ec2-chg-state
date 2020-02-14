@@ -1,0 +1,63 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  ec2-ctrl
+
+Parameters:
+  NameTag:
+    Type: String
+    Default: ""
+    Description: ""
+  Webhook:
+    Type: String
+    Default: ""
+    Description: ""
+  Channel:
+    Type: String
+    Default: ""
+    Description: ""
+
+Globals:
+  Function:
+    Timeout: 60
+
+Resources:
+  LambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: "(Daily) Start/Stop EC2 instances."
+      CodeUri: build/
+      Handler: handler
+      Runtime: go1.x
+      Tracing: PassThrough
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: "Allow"
+              Action:
+                  - "ec2:DescribeInstances"
+                  - "ec2:StartInstances"
+                  - "ec2:StopInstances"
+              Resource:
+                - "*"
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Description: "ec2-ctrl events."
+            Enabled: True
+            Schedule: "cron(0 0,12 ? * MON-FRI *)"
+      Environment:
+        Variables:
+          NameTag: !Ref NameTag
+          Webhook: !Ref Webhook
+          Channel: !Ref Channel
+          TZ: "Asia/Tokyo"
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${LambdaFunction}
+      RetentionInDays: 7
